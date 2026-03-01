@@ -81,25 +81,52 @@ export function groupBadgesByUser(data) {
 
   // Group the badges based on recipient
   data.forEach((badge) => {
-    const { resipiant, badge_name, date, image, description, flags } = badge;
+    const { badge_name, date, image, recipients, description: badgeDescription } = badge;
 
-    // If the user doesn't exist in the grouped object, create an empty array for them
-    if (!grouped[resipiant]) {
-      grouped[resipiant] = {
-        user_id: badge.user_id,
-        resipiant: resipiant,
-        badges: []
-      };
+    // Handle new structure with recipients array
+    if (recipients && Array.isArray(recipients)) {
+      recipients.forEach((recipient) => {
+        const recipientName = recipient.name;
+        // Use recipient-specific fields if available, otherwise fall back to badge-level fields
+        const recipientDate = recipient.date || date;
+        const recipientDesc = recipient.description || badgeDescription || '';
+        const recipientFlags = recipient.flags;
+
+        // If the user doesn't exist in the grouped object, create an empty array for them
+        if (!grouped[recipientName]) {
+          grouped[recipientName] = {
+            resipiant: recipientName,
+            badges: []
+          };
+        }
+
+        // Add the badge to the user's badge list
+        grouped[recipientName].badges.push({
+          badge_name,
+          date: recipientDate,
+          image,
+          description: recipientDesc,
+          flags: recipientFlags
+        });
+      });
+    } else {
+      // Handle old structure for backwards compatibility
+      const { resipiant } = badge;
+      if (!grouped[resipiant]) {
+        grouped[resipiant] = {
+          resipiant: resipiant,
+          badges: []
+        };
+      }
+
+      grouped[resipiant].badges.push({
+        badge_name,
+        date,
+        image,
+        description: badgeDescription,
+        flags: badge.flags
+      });
     }
-
-    // Add the badge to the user's badge list
-    grouped[resipiant].badges.push({
-      badge_name,
-      date,
-      image,
-      description,
-      flags
-    });
   });
 
   // Convert grouped object into an array and sort by badge count (most to least)
